@@ -198,7 +198,7 @@ reg.var<-"flipped"
 partition_rows<-createDataPartition(acs_df[, reg.var], p=.7, list=FALSE, times=1)
 acs_train<-acs_df[partition_rows,]
 acs_test<-acs_df[-partition_rows,]
-flip_model = cv.glmnet(as.matrix(acs_train[,1:ncol(acs_train)-1]), acs_train$flipped, family="binomial", type.measure = "auc", alpha=0.3)
+flip_model = cv.glmnet(as.matrix(acs_train[,1:ncol(acs_train)-1]), acs_train$flipped, family="binomial", type.measure = "auc", alpha=0.4)
 acs_test$fitted<-predict(flip_model, newx = as.matrix(acs_test[,1:ncol(acs_test)-1]), type="response", s="lambda.min")
 pred<-prediction(acs_test$fitted, acs_test$flipped)
 perf <- performance(pred,"tpr","fpr")
