@@ -1,6 +1,6 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output: html_notebook: default
 ---
 
 
@@ -18,9 +18,9 @@ import pandas as pd
 
 # Scraping the AP's live feed to get county level 2016 results
 
-with open('./DANK MEMES/president_metadata.json') as pres_meta:
+with open('./Election-Model/president_metadata.json') as pres_meta:
     pres_meta = json.load(pres_meta)
-with open('./DANK MEMES/president.json') as pres:
+with open('./Election-Model/president.json') as pres:
     pres = json.load(pres)
 def getResults():
     t = requests.get("http://interactives.ap.org/interactives/2016/general-election/live-data/production/2016-11-08/president.json?={}".format(time.time()))
@@ -31,7 +31,7 @@ pres['results']
 
 def make_cand_dict():
     cand_dict = {}
-    with open('./DANK MEMES/president_metadata.json') as pres_meta:
+    with open('./Election-Model/president_metadata.json') as pres_meta:
         pres_meta = json.load(pres_meta)
     for id,meta in pres_meta['cands'].items():
         cand_dict[id] = meta['fn']
