@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
-output: html_notebook: default
+output:
+  pdf_document: default
+  html_notebook: default
 ---
 
 
@@ -9,7 +11,7 @@ output: html_notebook: default
 This is a project to explore which features of counties made them more sucespitable to voting for trump. First, let's scrape results. Our 2016 results come courtesy of the AP, with some help from Python, and our 2012 results come courtesy of the Huffington Post, with bit of help from Unix. 
 
 
-```{python}
+```{python, eval=FALSE}
 import json
 import requests
 import time
@@ -94,7 +96,7 @@ Now that we've extracted everything from the AP's live feed, we should still pro
 So now that we've cleaned our 2016 results, we need to get our 2012 results. These are scraped from the Huffington posts's github-but they come in state-by-state CSVs- just takes a bit of command-line trickery to concatenate them.  
 
 ```{r}
-system("cd Downloads; cd election-2012-results-master; cd data; cat *.csv > results_12_merged.csv")
+system("cd ..; cd Downloads; cd election-2012-results-master; cd data; cat *.csv > results_12_merged.csv")
 results_12<-read_csv("~/Downloads/election-2012-results-master/data/results_12_merged.csv")
 results_12<-results_12[,c(1,3,4)]
 results_12<-results_12[results_12$fips!="fips", ]
