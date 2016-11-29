@@ -61,11 +61,6 @@ def parsePres():
     return called_races(parsed_results)
 parsePres()
 
-getResults()
-
-cl_races = parsePres()
-
-
 results = []
 for state,race in parsed_results.items():
     for candidate in race['results']:
@@ -81,7 +76,7 @@ pd.DataFrame(results).to_csv('./results_16.csv')
 
 Now that we've extracted everything from the AP's live feed, we should still probably clean everything and also grab our 2012 results. 
 
-```{r}
+```{r, warning=FALSE}
  library(readr)
  results_16 <- read_csv("~/results_16.csv")
  results_16<- results_16[,2:ncol(results_16)]
@@ -95,7 +90,7 @@ Now that we've extracted everything from the AP's live feed, we should still pro
 
 So now that we've cleaned our 2016 results, we need to get our 2012 results. These are scraped from the Huffington posts's github-but they come in state-by-state CSVs- just takes a bit of command-line trickery to concatenate them.  
 
-```{r}
+```{r, warning=FALSE}
 system("cd ..; cd Downloads; cd election-2012-results-master; cd data; cat *.csv > results_12_merged.csv")
 results_12<-read_csv("~/Downloads/election-2012-results-master/data/results_12_merged.csv")
 results_12<-results_12[,c(1,3,4)]
@@ -113,12 +108,12 @@ county_results_16_12<-sqldf("select a.fips, a.vote_share_dem_12, b.vote_share_de
 county_results_16_12<-county_results_16_12[!is.na(county_results_16_12$fips),]
 plot(county_results_16_12$vote_share_dem_12, county_results_16_12$vote_share_dem_16)
 ```
-This gives us a good indication of the correlation between 2012 and 2016 vote share- Let's append some census data onto everything, and see how it goes. 
+This gives us a good indication of the correlation between 2012 and 2016 vote share- Let's append some census data onto everything, and see how it goes. It is important to note that the Census data is from the 2015 ACS Survey. This is important for two reasons. The first one is that I wanted the most up-to-date census data, and the second is that the 2015 ACS covered only 830 of the of the most populous counties, (all counties with population over 65,000), as opposed to the 3,143 counties in the United States. I felt was important to avoid overfitting to outliers present in the wide range of counties avaliable, and that it would be a more up-to-date and representative sample of the American electorate. 
 
-```{r}
+```{r, warning=FALSE}
 require(acs)
 require(sqldf)
-#api.key.install(key="3fdf164b3e49c898d30e959ed1b18194fe3b4dfa")
+#api.key.install(key="REDACTED")
 all_counties<-geo.make(state="*",county="*")
 race_table<-acs.fetch(endyear = 2015, span=1, geography = all_counties, table.number = "B02001", col.names = "pretty")
 hispanic_table<-acs.fetch(endyear = 2015, span=1, geography = all_counties, table.number = "B03003", col.names = "pretty")
@@ -160,7 +155,7 @@ acs_results<-dplyr::left_join(all_acs_data, county_results_16_12, by=c('fips'='f
 Great, now we have it all appended. Let's do some descriptive statistics 
 
 
-```{r}
+```{r, warning=FALSE}
 acs_results$vote_share_dem_12<-as.numeric(acs_results$vote_share_dem_12)
 acs_results$diff<-acs_results$vote_share_dem_16-acs_results$vote_share_dem_12
 mean(acs_results$diff, na.rm = TRUE)
@@ -169,17 +164,9 @@ plot(density(acs_results$diff, na.rm=TRUE))
 acs_results_model<-acs_results[!is.na(acs_results$diff),]
 ```
 
-Ok, this shows what we've already known- in these 816 counties, she did worse- it doesn't take a day of appending data to figure that one out. Now, a qq plot. Because I love my qqplots. 
+Let's try to model a binary outcome- Run a model to predict what caused a county to switch to republican in 2016- a simple y/n.
 
-```{r}
-qqplot(acs_results_model$vote_share_dem_12, acs_results_model$vote_share_dem_16)
-
-
-```
-
-Let's try to model this a few ways- first let's just run a glmnet to predict what caused a county to switch to republican in 2016- a simple y/n.
-
-```{r}
+```{r, warning=FALSE}
 require(caret)
 require(glmnet)
 require(pROC)
@@ -207,9 +194,9 @@ plot(perf,colorize=FALSE, col="black")
 
 ```
 
-Ok, so we're either really overfit, or we're actually doing pretty well here- I'll leave that up to you. What's important to note isn't really the model- not too much point in trying to predict what already happened, but we can learn a lot from creating this model- specifically, what are the biggest influencers in a county switching from 2012-2016? 
+AUC looks good- .92 on our model of predicted flips.  What's important to note isn't really the model- not too much point in trying to predict what already happened, but we can learn a lot from creating this model- specifically, what are the biggest influencers in a county switching from 2012-2016? 
 
-```{r}
+```{r, warning=FALSE}
 flip_coeffs<-coef.cv.glmnet(flip_model)
 tmp<-as.data.frame(as.matrix(flip_coeffs))
 tmp$factor<-rownames(tmp)
@@ -220,4 +207,4 @@ imp_plot<-ggplot(data=tmp, aes(x=reorder(factor_name, coeff), y=coeff)) +
         axis.title=element_text(size=8,face="bold"))
 imp_plot
 ```
-What stands out: Education, Age, and Gender seem to carry the most weight when determining which counties stayed democratic, and which ones did not. There is a marked split between people with 2 year college degrees and people with 4 year college degrees- which suggests that a 4 year college degree is really the tipping point at which education affects partisanship. Furthermore, I think that the high weights of both widowed men and women suggest serve as proxies for Age and Income- people whom are older are more likley to be widowed, and people who have lower income are more likely to have shorter lifespans, which would create relatively high amounts of widows in the population. To me, the most interesting part is that in an eleciton where a common theme was racial political polarization, race seemed to play a small role in determining which counties flipped republican, compared with overall education, race, and gender. 
+What stands out: Education, Age, and Gender seem to carry the most weight when determining which counties stayed Democratic, and which ones did not. There is a marked split between people with 2 year college degrees and people with 4 year college degrees- which suggests that a 4 year college degree is really the tipping point at which education affects partisanship. Furthermore, I think that the high weights of both widowed men and women suggest serve as proxies for Age and Income- people whom are older are more likley to be widowed, and people who have lower income are more likely to have shorter lifespans, which would create relatively high amounts of widows in the population. To me, the most interesting part is that in an eleciton where a common theme was racial political polarization, race seemed to play a small role in determining which counties flipped republican, compared with overall education, race, and gender. 
